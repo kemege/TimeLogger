@@ -2,12 +2,10 @@ import unicode
 import windows
 import logging
 import os
+import types
 
 const BUFFER_LENGTH = 2048
 type
-  Job = object of RootObj
-    title*: string
-    path*: string
   TLastInputInfo = object
     cbSize*: WINUINT
     dwTime*: DWORD
