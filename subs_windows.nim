@@ -55,7 +55,7 @@ proc getCurrentJob(): Job=
   
   result.path = UTF16ToString(path, dPathLength)
 
-proc isIdle(): bool=
+proc isIdle(time: int64): bool=
   var
     lastinput = TLastInputInfo()
     pLastInput: ptr TLastInputInfo
@@ -64,7 +64,7 @@ proc isIdle(): bool=
   pLastInput = addr(lastInput)
   discard GetLastInputInfo(plastInput)
 
-  result = (GetTickCount64() - lastInput.dwTime) > 500
+  result = (GetTickCount64() - lastInput.dwTime) > time
 
 when isMainModule:
   var j: Job
@@ -72,5 +72,5 @@ when isMainModule:
     j = getCurrentJob()
     echo j.title
     echo j.path
-    echo isIdle().repr
+    echo isIdle(3000).repr
     sleep(1500)
