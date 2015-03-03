@@ -24,7 +24,7 @@ proc UTF16ToString(buffer: array[0..BUFFER_LENGTH, uint16], length: int): string
   for i in 0..length:
     result.add(Rune(buffer[i]).toUTF8)
 
-proc getCurrentJob(): Job=
+proc getCurrentJob*(): Job=
   var
     title, path: array[0..BUFFER_LENGTH, uint16]
     pTitle, pPath: LPWSTR
@@ -55,7 +55,7 @@ proc getCurrentJob(): Job=
   
   result.path = UTF16ToString(path, dPathLength)
 
-proc isIdle(time: int64): bool=
+proc isIdle*(time: int64): bool=
   var
     lastinput = TLastInputInfo()
     pLastInput: ptr TLastInputInfo
