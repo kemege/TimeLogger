@@ -32,28 +32,41 @@ proc getCurrentJob*(): Job=
     pid, dPathLength: DWORD
     ppid, pPathLength: ptr DWORD
     hProcess: HANDLE
+    hWindow = GetForegroundWindow()
 
-  pTitle = addr(title[0])
-  pPath = addr(path[0])
-  result = Job()
+  if hWindow == 0:
+    result.title = ""
+    result.path = "Unknown"
+  else:
+    pTitle = addr(title[0])
+    pPath = addr(path[0])
+    result = Job()
 
-  lTitle = GetWindowTextW(GetForegroundWindow(), pTitle, BUFFER_LENGTH)
-  result.title = UTF16ToString(title, lTitle)
+    lTitle = GetWindowTextW(hWindow, pTitle, BUFFER_LENGTH)
+    result.title = UTF16ToString(title, lTitle)
 
-  ppid = addr(pid)
-  pPathLength = addr(dPathLength)
-  dPathLength = BUFFER_LENGTH
-  discard GetWindowThreadProcessId(GetForegroundWindow(), ppid)
-  hProcess = OpenProcess(SYNCHRONIZE or PROCESS_QUERY_INFORMATION or PROCESS_VM_READ, WINBOOL(true), pid)
+    ppid = addr(pid)
+    pPathLength = addr(dPathLength)
+    dPathLength = BUFFER_LENGTH
+    discard GetWindowThreadProcessId(hWindow, ppid)
 
-  var err = QueryFullProcessImageNameW(hProcess, DWORD(0), pPath, pPathLength)
-  if err == 0:
-    var e: ref OSError
-    new(e)
-    e.msg = "Failed to retrieve Process Image Name. ErrNo=" & $GetLastError()
-    raise e
-  
-  result.path = UTF16ToString(path, dPathLength)
+    if pid == 0:
+      var e: ref OSError
+      new(e)
+      e.msg = "Failed to retrieve PID. ErrNo=" & $GetLastError()
+      raise e
+    hProcess = OpenProcess(SYNCHRONIZE or PROCESS_QUERY_INFORMATION or PROCESS_VM_READ, WINBOOL(true), pid)
+
+    var err = QueryFullProcessImageNameW(hProcess, DWORD(0), pPath, pPathLength)
+    if err == 0:
+      var e: ref OSError
+      new(e)
+      e.msg = "Failed to retrieve Process Image Name. ErrNo=" & $GetLastError()
+      echo result.title
+      echo pid
+      raise e
+    
+    result.path = UTF16ToString(path, dPathLength)
 
 proc isIdle*(time: int64): bool=
   var
