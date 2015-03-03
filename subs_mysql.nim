@@ -1,3 +1,4 @@
+import math
 import db_mysql
 import mysql
 import os
@@ -7,19 +8,33 @@ import streams
 from times import Time
 import types
 
-proc AppendRecord(db: TDbConn, activity: Activity): int64=
+proc AppendRecord*(db: TDbConn, activity: Activity): int64=
   var
     title = activity.job.title
     path = activity.job.path
+    id_program: int64
   
   title = replace(title, r"\", r"\\")
   path = replace(path, r"\", r"\\")
 
-  result = insertId(db, sql"INSERT INTO activity (title, path, begin, finish, idle) VALUES (?, ?, ?, ?, ?)",
-      title, path, activity.begin.uint32, activity.finish.uint32, activity.idle.uint8
+  # check for existing programs
+  var str_program = getRow(db, sql"SELECT id FROM program WHERE path = ? LIMIT 1", path)[0]
+
+  if str_program == "":
+    # generate a new random color for this program
+    randomize()
+    var color = format("$1$2$3", toHex(random(256), 2), toHex(random(256), 2), toHex(random(256), 2))
+    # add a new program into database
+    id_program = insertId(db, sql"INSERT INTO program (path, color) VALUES (?, ?)", path, color)
+  else:
+    id_program = parseInt(str_program)
+
+  # actually insert the activity
+  result = insertId(db, sql"INSERT INTO activity (title, program, begin, finish, idle) VALUES (?, ?, ?, ?, ?)",
+      title, id_program, activity.begin.uint32, activity.finish.uint32, activity.idle.uint8
       )
 
-proc GetDbConfig(): array[4, string]=
+proc GetDbConfig*(): array[4, string]=
   var file = newFileStream(CONFIG, fmRead)
   if file != nil:
     var 
@@ -53,7 +68,7 @@ proc GetDbConfig(): array[4, string]=
         discard
     close(p)
 
-proc OpenDbConnection(): TDbConn=
+proc OpenDbConnection*(): TDbConn=
   var db = GetDbConfig()
   result = db_mysql.open(db[0], db[1], db[2], db[3])
   if mysql.set_character_set(result, "utf8") == 0:
