@@ -30,8 +30,10 @@ proc AppendRecord*(db: TDbConn, activity: Activity): int64=
     id_program = parseInt(str_program)
 
   # actually insert the activity
-  result = insertId(db, sql"INSERT INTO activity (title, program, begin, finish, idle) VALUES (?, ?, ?, ?, ?)",
-      title, id_program, activity.begin.uint32, activity.finish.uint32, activity.idle.uint8
+  result = insertId(db, 
+      sql"INSERT INTO activity (title, program, begin, finish, idle, duration) VALUES (?, ?, ?, ?, ?, ?)",
+      title, id_program, activity.begin.uint32, activity.finish.uint32, 
+      activity.idle.uint8, activity.finish.int32 - activity.begin.int32
       )
 
 proc GetDbConfig*(): array[4, string]=
