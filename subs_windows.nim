@@ -1,10 +1,12 @@
+## some Windows-specific procedures for collecting 
+## activity information
 import unicode
 import windows
 import logging
 import os
 import types
 
-const BUFFER_LENGTH = 2048
+const BUFFER_LENGTH = 2048 ## max buffer length
 type
   TLastInputInfo = object
     cbSize*: WINUINT
@@ -12,19 +14,30 @@ type
 
 proc QueryFullProcessImageNameW(hProcess: HANDLE, dwFlags: DWORD, lpExeName: LPWSTR, lpdwSize: PDWORD): WINBOOL{.
     stdcall, dynlib: "kernel32", importc: "QueryFullProcessImageNameW".}
+  ## QueryFullProcessImageNameW: 
+  ## https://msdn.microsoft.com/en-us/library/windows/desktop/ms684919%28v=vs.85%29.aspx
 
 proc GetLastInputInfo(plii: ptr TLastInputInfo): WINBOOL{.
     stdcall, dynlib: "user32", importc: "GetLastInputInfo".}
+  ## GetLastInputInfo
+  ## https://msdn.microsoft.com/en-us/library/windows/desktop/ms646302%28v=vs.85%29.aspx
 
 proc GetTickCount64(): ULONGLONG{.
     stdcall, dynlib: "kernel32", importc: "GetTickCount64".}
+  ## GetTickCount64
+  ## https://msdn.microsoft.com/en-us/library/windows/desktop/ms724411%28v=vs.85%29.aspx
 
 proc UTF16ToString(buffer: array[0..BUFFER_LENGTH, uint16], length: int): string=
+  ## convert LPWSTR(uint16 array) to Nim string
   result = ""
   for i in 0..length:
     result.add(Rune(buffer[i]).toUTF8)
 
 proc getCurrentJob*(): Job=
+  ## grab the current active window's title and image file path 
+  ## using the Windows API
+  ## 
+  ## requires Windows Vista or higher
   var
     title, path: array[0..BUFFER_LENGTH, uint16]
     pTitle, pPath: LPWSTR
@@ -69,6 +82,8 @@ proc getCurrentJob*(): Job=
     result.path = UTF16ToString(path, dPathLength)
 
 proc isIdle*(time: int64): bool=
+  ## judge is the mouse/keyboard has moved in the last `time` 
+  ## milliseconds
   var
     lastinput = TLastInputInfo()
     pLastInput: ptr TLastInputInfo

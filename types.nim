@@ -1,19 +1,20 @@
 import times
 
-const CONFIG* = "timelogger.config"
+const CONFIG* = "timelogger.config" ## Configuration file name
 
 type
-  Job* = object
+  Job* = object ## A job acquired from system
     title*: string
     path*: string
 
-  Activity* = object
+  Activity* = object ## An activity
     job*: Job
     begin*: Time
     finish*: Time
     idle*: bool
 
 proc `==` *(a, b: Job): bool=
+  ## compare if two `Job` object are the same
   if a.title == b.title and a.path == b.path:
     return true
   else:

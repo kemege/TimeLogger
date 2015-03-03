@@ -9,6 +9,7 @@ from times import Time
 import types
 
 proc AppendRecord*(db: TDbConn, activity: Activity): int64=
+  ## add the specified activity into database
   var
     title = activity.job.title
     path = activity.job.path
@@ -37,6 +38,7 @@ proc AppendRecord*(db: TDbConn, activity: Activity): int64=
       )
 
 proc GetDbConfig*(): array[4, string]=
+  ## read database configurations from CONFIG file
   var file = newFileStream(CONFIG, fmRead)
   if file != nil:
     var 
@@ -71,6 +73,7 @@ proc GetDbConfig*(): array[4, string]=
     close(p)
 
 proc OpenDbConnection*(): TDbConn=
+  ## open a connection to mysql database, and change character set from latin1(default) to utf8
   var db = GetDbConfig()
   result = db_mysql.open(db[0], db[1], db[2], db[3])
   if mysql.set_character_set(result, "utf8") == 0:
