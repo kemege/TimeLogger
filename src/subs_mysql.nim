@@ -2,6 +2,7 @@ import math
 import db_mysql
 import mysql
 import os
+import re
 import parsecfg
 import strutils
 import streams
@@ -81,6 +82,32 @@ proc OpenDbConnection*(): TDbConn=
   result = db_mysql.open(db[0], db[1], db[2], db[3])
   if mysql.set_character_set(result, "utf8") == 0:
     discard "set_character_set failed"
+
+proc GetTagRules*(db: TDbConn): seq[TagRule]=
+  ## Fetch all tag rules from database
+  ##
+  ## column: 0 for window title, 1 for executable path
+  var tagrules = db.getAllRows(sql"SELECT `id_tag`, `column`, `keyword` FROM activity_tag_rule")
+  result = newSeq[TagRule](tagrules.len)
+  for i, row in tagrules:
+    result[i] = TagRule(tag: parseInt(row[0]), column: parseInt(row[1]), reg: re(row[2]))
+
+proc GetFittedTags*(activity: Activity, tagRules: seq[TagRule]): seq[int]=
+  ## Find out which tag to apply by matching the window 
+  ## title and executable of an activity
+  result = @[]
+  for rule in tagRules:
+    if rule.column == 0:
+      if activity.job.title.find(rule.reg) > -1:
+        result.add(rule.tag)
+    if rule.column == 1:
+      if activity.job.path.find(rule.reg) > -1:
+        result.add(rule.tag)
+
+proc ApplyTag*(db: TDbConn, id_activity: int, ids_tag: seq[int]): bool=
+  ## add tags into database
+  for id_tag in ids_tag:
+    db.exec(sql"INSERT INTO activity_tag (id_activity, id_tag) VALUES (?, ?)", id_activity, id_tag)
 
 when isMainModule:
   echo("Getting database config....")

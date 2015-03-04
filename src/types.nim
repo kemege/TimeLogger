@@ -1,4 +1,5 @@
 import times
+import re
 
 const CONFIG* = "timelogger.config" ## Configuration file name
 
@@ -12,6 +13,11 @@ type
     begin*: Time
     finish*: Time
     idle*: bool
+
+  TagRule* = object ## Rule about auto-tagging
+    tag*: int
+    reg*: Regex
+    column*: int
 
 proc `==` *(a, b: Job): bool=
   ## compare if two `Job` object are the same
