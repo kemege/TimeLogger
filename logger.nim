@@ -24,7 +24,9 @@ while true:
   else:
     if not (currJob == lastJob):
       if currAct.finish - currAct.begin > 0:
-        discard AppendRecord(conn, currAct)
+        if AppendRecord(conn, currAct) == -1:
+          conn = OpenDbConnection()
+          discard AppendRecord(conn, currAct)
       lastJob = currJob
       currAct.job.title = currJob.title
       currAct.job.path = currJob.path

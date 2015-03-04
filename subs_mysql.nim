@@ -18,24 +18,27 @@ proc AppendRecord*(db: TDbConn, activity: Activity): int64=
   title = replace(title, r"\", r"\\")
   path = replace(path, r"\", r"\\")
 
-  # check for existing programs
-  var str_program = getRow(db, sql"SELECT id FROM program WHERE path = ? LIMIT 1", path)[0]
+  try:
+    # check for existing programs
+    var str_program = getRow(db, sql"SELECT id FROM program WHERE path = ? LIMIT 1", path)[0]
 
-  if str_program == "":
-    # generate a new random color for this program
-    randomize()
-    var color = format("$1$2$3", toHex(random(256), 2), toHex(random(256), 2), toHex(random(256), 2))
-    # add a new program into database
-    id_program = insertId(db, sql"INSERT INTO program (path, color) VALUES (?, ?)", path, color)
-  else:
-    id_program = parseInt(str_program)
+    if str_program == "":
+      # generate a new random color for this program
+      randomize()
+      var color = format("$1$2$3", toHex(random(256), 2), toHex(random(256), 2), toHex(random(256), 2))
+      # add a new program into database
+      id_program = insertId(db, sql"INSERT INTO program (path, color) VALUES (?, ?)", path, color)
+    else:
+      id_program = parseInt(str_program)
 
-  # actually insert the activity
-  result = insertId(db, 
-      sql"INSERT INTO activity (title, program, begin, finish, idle, duration) VALUES (?, ?, ?, ?, ?, ?)",
-      title, id_program, activity.begin.uint32, activity.finish.uint32, 
-      activity.idle.uint8, activity.finish.int32 - activity.begin.int32
-      )
+    # actually insert the activity
+    result = insertId(db, 
+        sql"INSERT INTO activity (title, program, begin, finish, idle, duration) VALUES (?, ?, ?, ?, ?, ?)",
+        title, id_program, activity.begin.uint32, activity.finish.uint32, 
+        activity.idle.uint8, activity.finish.int32 - activity.begin.int32
+        )
+  except EDb:
+    result = -1
 
 proc GetDbConfig*(): array[4, string]=
   ## read database configurations from CONFIG file
