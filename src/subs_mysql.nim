@@ -104,7 +104,7 @@ proc GetFittedTags*(activity: Activity, tagRules: seq[TagRule]): seq[int]=
       if activity.job.path.find(rule.reg) > -1:
         result.add(rule.tag)
 
-proc ApplyTag*(db: TDbConn, id_activity: int, ids_tag: seq[int]): bool=
+proc ApplyTag*(db: TDbConn, id_activity: int64, ids_tag: seq[int]): bool=
   ## add tags into database
   for id_tag in ids_tag:
     db.exec(sql"INSERT INTO activity_tag (id_activity, id_tag) VALUES (?, ?)", id_activity, id_tag)
