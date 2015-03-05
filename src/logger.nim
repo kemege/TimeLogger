@@ -9,6 +9,7 @@ var
   currJob, lastJob: Job = getCurrentJob()
   currAct: Activity
   conn = OpenDbConnection()
+  tagRules = conn.GetTagRules()
 
 currAct.job.title = currJob.title
 currAct.job.path = currJob.path
@@ -16,17 +17,22 @@ currAct.begin = getTime()
 currAct.finish = getTime()
 currAct.idle = false
 
-conn = OpenDbConnection()
 while true:
   currJob = getCurrentJob()
   if isIdle(1000*60*15):
     currAct.idle = true
+    currAct.job.title = "Idle"
+    currAct.job.path = "Idle"
   else:
     if not (currJob == lastJob):
       if currAct.finish - currAct.begin > 0:
-        if AppendRecord(conn, currAct) == -1:
+        var res = AppendRecord(conn, currAct)
+        if res == -1:
           conn = OpenDbConnection()
-          discard AppendRecord(conn, currAct)
+          res = AppendRecord(conn, currAct)
+        # deal with tags
+        discard conn.ApplyTag(res, GetFittedTags(currAct, tagRules))
+
       lastJob = currJob
       currAct.job.title = currJob.title
       currAct.job.path = currJob.path
