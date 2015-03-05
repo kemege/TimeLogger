@@ -1,11 +1,12 @@
 import nake
 
 const
-  NimName = "src/logger.nim"
-  ExeName = "--out:../logger"
+  exeName = @["logger"]
 
 task "debug", "Build for debugging":
-  shell(nimExe, "c", "-d:debug", ExeName, NimName)
+  for exe in exeName:
+    shell(nimExe, "c", "-d:debug", "--out:../" & exe, "src/" & exe)
 
 task "release", "Build for release":
-  shell(nimExe, "c", "-d:release", ExeName, NimName)
+  for exe in exeName:
+    shell(nimExe, "c", "-d:release", "--out:../" & exe, "src/" & exe)
