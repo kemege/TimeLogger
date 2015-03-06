@@ -3,11 +3,12 @@ import codecs
 import sys
 import glob
 
+
 def main():
     conn = sqlite3.connect(sys.argv[1] + ".db3")
 
     cursor = conn.cursor()
-    
+
     i = 0
     line2 = ''
 
@@ -31,7 +32,7 @@ def main():
         f.close()
     cursor.close()
     conn.commit()
-    
+
 
 def help():
     print('''Usage: {0} <SQL Filename Prefix>
