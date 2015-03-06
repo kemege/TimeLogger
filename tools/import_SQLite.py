@@ -28,8 +28,8 @@ def main():
 
     # fetch active activities
     for row in sc.execute('''
-        SELECT GroupId, DisplayName, StartUtcTime, EndUtcTime \
-        FROM `activity` WHERE TimelineId = 3 ORDER BY ActivityId LIMIT 1\
+        SELECT GroupId, DisplayName, StartUtcTime, EndUtcTime
+        FROM `activity` WHERE TimelineId = 3 ORDER BY ActivityId
         '''):
         title = row[1]
         path = groups[int(row[0])]
@@ -57,6 +57,37 @@ def main():
             VALUES (%s, %s, %s, %s, %s, %s)',
             (title, program, begin, finish, 0, finish - begin)
             )
+    # fetch idle activities
+    # check idle program existence
+    mc.execute('SELECT id FROM program WHERE path = %s LIMIT 1', ('Idle',))
+    row = mc.fetchone()
+    if row:
+        program = row[0]
+    else:
+        color = '{0:06X}'.format(random.randint(0, 256**3))
+        mc.execute(
+            'INSERT INTO program (path, color) VALUES (%s, %s)',
+            (path, color)
+            )
+        program = mdb.insert_id()
+
+    for row in sc.execute('''
+        SELECT StartUtcTime, EndUtcTime
+        FROM `activity` WHERE TimelineId = 2 AND GroupId = 2
+        ORDER BY ActivityId
+        '''):
+        begin = calendar.timegm(
+            datetime.datetime.strptime(row[0][:-4], timePattern).timetuple()
+            )
+        finish = calendar.timegm(
+            datetime.datetime.strptime(row[1][:-4], timePattern).timetuple()
+            )
+        mc.execute(
+            'INSERT INTO activity (title, program, begin, finish, idle, duration) \
+            VALUES (%s, %s, %s, %s, %s, %s)',
+            ('Idle', program, begin, finish, 0, finish - begin)
+            )
+
     sc.close()
     sdb.close()
     mdb.commit()
