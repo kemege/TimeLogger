@@ -94,6 +94,21 @@ proc isIdle*(time: int64): bool=
 
   result = (GetTickCount64() - lastInput.dwTime) > time
 
+proc moveFile*(oldName, newName: string): bool=
+  ## move file 
+  var
+    lpExistingFileName = newWideCString(oldName)
+    lpNewFileName = newWideCString(newName)
+  var r = MoveFileW(cast[LPWSTR](lpExistingFileName[0].addr), cast[LPWSTR](lpNewFileName[0].addr))
+  result = r.bool
+
+proc deleteFile*(fileName: string): bool=
+  ## move file 
+  var
+    lpFileName = newWideCString(fileName)
+  var r = DeleteFileW(cast[LPWSTR](lpFileName[0].addr))
+  result = r.bool
+
 when isMainModule:
   var j: Job
   for i in 0..100:

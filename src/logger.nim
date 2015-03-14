@@ -1,15 +1,21 @@
 import os
 import times
 import parsecfg
-import subs_mysql
 import subs_windows
+import subs_cache
 import types
+import threadpool
+
+proc ThreadSubmitData() {.gcsafe.}=
+  while true:
+    sleep(1000*900)
+    SubmitData()
+
+spawn ThreadSubmitData()
 
 var
   currJob, lastJob: Job = getCurrentJob()
   currAct: Activity
-  conn = OpenDbConnection()
-  tagRules = conn.GetTagRules()
 
 currAct.job.title = currJob.title
 currAct.job.path = currJob.path
@@ -26,12 +32,7 @@ while true:
   else:
     if not (currJob == lastJob):
       if currAct.finish - currAct.begin > 0:
-        var res = AppendRecord(conn, currAct)
-        if res == -1:
-          conn = OpenDbConnection()
-          res = AppendRecord(conn, currAct)
-        # deal with tags
-        discard conn.ApplyTag(res, GetFittedTags(currAct, tagRules))
+        AddToCache(currAct)
 
       lastJob = currJob
       currAct.job.title = currJob.title
