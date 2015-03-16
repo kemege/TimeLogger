@@ -11,36 +11,40 @@ proc ThreadSubmitData() {.gcsafe.}=
     sleep(1000*900)
     SubmitData()
 
-spawn ThreadSubmitData()
+proc main()=
+  spawn ThreadSubmitData()
 
-var
-  currJob, lastJob: Job = getCurrentJob()
-  currAct: Activity
+  var
+    currJob, lastJob: Job = getCurrentJob()
+    currAct: Activity
 
-currAct.job.title = currJob.title
-currAct.job.path = currJob.path
-currAct.begin = getTime()
-currAct.finish = getTime()
-currAct.idle = false
+  currAct.job.title = currJob.title
+  currAct.job.path = currJob.path
+  currAct.begin = getTime()
+  currAct.finish = getTime()
+  currAct.idle = false
 
-while true:
-  currJob = getCurrentJob()
-  if isIdle(1000*60*15):
-    currAct.idle = true
-    currAct.job.title = "Idle"
-    currAct.job.path = "Idle"
-  else:
-    if not (currJob == lastJob):
-      if currAct.finish - currAct.begin > 0:
-        AddToCache(currAct)
-
-      lastJob = currJob
-      currAct.job.title = currJob.title
-      currAct.job.path = currJob.path
-      currAct.begin = getTime()
-      currAct.finish = getTime()
-      currAct.idle = false
+  while true:
+    currJob = getCurrentJob()
+    if isIdle(1000*60*15):
+      currAct.idle = true
+      currAct.job.title = "Idle"
+      currAct.job.path = "Idle"
     else:
-      currAct.finish = getTime()
+      if not (currJob == lastJob):
+        if currAct.finish - currAct.begin > 0:
+          AddToCache(currAct)
 
-  sleep(500)
+        lastJob = currJob
+        currAct.job.title = currJob.title
+        currAct.job.path = currJob.path
+        currAct.begin = getTime()
+        currAct.finish = getTime()
+        currAct.idle = false
+      else:
+        currAct.finish = getTime()
+
+    sleep(500)
+
+when isMainModule:
+  main()
