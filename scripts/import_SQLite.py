@@ -93,7 +93,7 @@ def main():
         mc.execute(
             'INSERT INTO activity (title, program, begin, finish, idle, duration) \
             VALUES (%s, %s, %s, %s, %s, %s)',
-            ('Idle', program, begin, finish, 0, finish - begin)
+            ('Idle', program, begin, finish, 1, finish - begin)
             )
 
     sc.close()
