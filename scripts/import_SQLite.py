@@ -6,13 +6,16 @@ import sys
 import random
 import MySQLdb
 
+MAX_TITLE = 1024
+
 
 def main():
     sdb = sqlite3.connect(sys.argv[1])
     sc = sdb.cursor()
     groups = {}
+    aliases = {}
     mdb = MySQLdb.connect(
-        sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], charset='utf8'
+        sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], charset='utf8mb4'
         )
     mc = mdb.cursor()
     timePattern = '%Y-%m-%d %H:%M:%S'
@@ -24,7 +27,9 @@ def main():
         '''):
         tree = etree.fromstring(row[1])
         path = tree.find('FullPath').text
-        groups[int(row[0])] = path
+        groups[int(row[0])] = path if path is not None else 'Unknown'
+        alias = tree.find('Description').text
+        aliases[int(row[0])] = alias if alias is not None else ''
 
     # fetch active activities
     for row in sc.execute('''
@@ -32,7 +37,10 @@ def main():
         FROM `activity` WHERE TimelineId = 3 ORDER BY ActivityId
         '''):
         title = row[1]
-        path = groups[int(row[0])]
+        if len(title) > MAX_TITLE:
+            title = title[0:MAX_TITLE//2-1] + '..' + title[-MAX_TITLE//2+1:]
+        groupId = int(row[0])
+        path = groups[groupId]
         begin = calendar.timegm(
             datetime.datetime.strptime(row[2][:-4], timePattern).timetuple()
             )
@@ -48,8 +56,8 @@ def main():
         else:
             color = '{0:06X}'.format(random.randint(0, 256**3))
             mc.execute(
-                'INSERT INTO program (path, color) VALUES (%s, %s)',
-                (path, color)
+                'INSERT INTO program (path, color, alias) VALUES (%s, %s, %s)',
+                (path, color, aliases[groupId])
                 )
             program = mdb.insert_id()
         mc.execute(
@@ -97,7 +105,7 @@ def main():
 
 def help():
     print('''Usage: {0} <SQLite Filename> <MySQL Address> <MySQL Username> \
-        <MySQL Password> <MySQL DB Name>
+<MySQL Password> <MySQL DB Name>
 Transport activity data from SQLite database from ManicTime into MySQL \
 database for TimeLogger
         '''.format(sys.argv[0]))
