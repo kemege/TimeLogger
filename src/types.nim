@@ -18,6 +18,7 @@ type
     tag*: int
     reg*: Regex
     column*: int
+    keyword*: string
 
 proc `==` *(a, b: Job): bool=
   ## compare if two `Job` object are the same
