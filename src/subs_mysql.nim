@@ -8,6 +8,7 @@ import strutils
 import streams
 from times import Time
 import types
+import subs_config
 
 proc AppendRecord*(db: TDbConn, activity: Activity): int64=
   ## add the specified activity into database
@@ -41,47 +42,27 @@ proc AppendRecord*(db: TDbConn, activity: Activity): int64=
   except EDb:
     result = -1
 
-proc GetDbConfig*(): array[4, string]=
-  ## read database configurations from CONFIG file
-  var file = newFileStream(CONFIG, fmRead)
-  if file != nil:
-    var 
-      p: CfgParser
-      section = false
-    open(p, file, CONFIG)
-    while true:
-      var e = next(p)
-      case e.kind
-      of cfgEof:
-        break
-      of cfgSectionStart:
-        if e.section == "Database":
-          section = true
-        else:
-          section = false
-      of cfgKeyValuePair:
-        if section:
-          case e.key
-          of "server":
-            result[0] = e.value
-          of "db":
-            result[3] = e.value
-          of "user":
-            result[1] = e.value
-          of "password":
-            result[2] = e.value
-          else:
-            discard
-      else:
-        discard
-    close(p)
+proc AppendRecords*(db: TDbConn, actList: seq[Activity]): int64=
+  for act in actList:
+    if db.AppendRecord(act) == -1:
+      result = -1
+    else:
+      result = 0
 
-proc OpenDbConnection*(): TDbConn=
+proc GetDbConfig(): array[4, string]=
+  ## read database configurations from CONFIG file
+  result[0] = getParameter(CONFIG, "mysql", "server")
+  result[1] = getParameter(CONFIG, "mysql", "user")
+  result[2] = getParameter(CONFIG, "mysql", "password")
+  result[3] = getParameter(CONFIG, "mysql", "db")
+  echo result[0],result[1],result[2],result[3]
+
+proc Init*(): TDbConn=
   ## open a connection to mysql database, and change character set from latin1(default) to utf8
   var db = GetDbConfig()
   result = db_mysql.open(db[0], db[1], db[2], db[3])
-  if mysql.set_character_set(result, "utf8") == 0:
-    discard "set_character_set failed"
+  if mysql.set_character_set(result, "utf8") != 0:
+    dbError("set_character_set failed")
 
 proc GetTagRules*(db: TDbConn): seq[TagRule]=
   ## Fetch all tag rules from database
@@ -90,7 +71,7 @@ proc GetTagRules*(db: TDbConn): seq[TagRule]=
   var tagrules = db.getAllRows(sql"SELECT `id_tag`, `column`, `keyword` FROM activity_tag_rule")
   result = newSeq[TagRule](tagrules.len)
   for i, row in tagrules:
-    result[i] = TagRule(tag: parseInt(row[0]), column: parseInt(row[1]), reg: re(row[2]))
+    result[i] = TagRule(tag: parseInt(row[0]), column: parseInt(row[1]), reg: re(row[2]), keyword: row[2])
 
 proc GetFittedTags*(activity: Activity, tagRules: seq[TagRule]): seq[int]=
   ## Find out which tag to apply by matching the window 
