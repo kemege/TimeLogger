@@ -55,7 +55,6 @@ proc GetDbConfig(): array[4, string]=
   result[1] = getParameter(CONFIG, "mysql", "user")
   result[2] = getParameter(CONFIG, "mysql", "password")
   result[3] = getParameter(CONFIG, "mysql", "db")
-  echo result[0],result[1],result[2],result[3]
 
 proc Init*(): TDbConn=
   ## open a connection to mysql database, and change character set from latin1(default) to utf8
