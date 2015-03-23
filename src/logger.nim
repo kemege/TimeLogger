@@ -1,15 +1,16 @@
 import os
 import times
-import parsecfg
+import threadpool
 import subs_windows
 import subs_cache
+import subs_cache_write
+import subs_config
 import types
-import threadpool
 
 proc ThreadSubmitData() {.gcsafe.}=
   while true:
-    sleep(1000*900)
     SubmitData()
+    sleep(1000*900)
 
 proc main()=
   spawn ThreadSubmitData()

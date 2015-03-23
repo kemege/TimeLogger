@@ -15,23 +15,12 @@ type
     Data*: JsonNode
 
   RpcResponse* = object
-    err: bool
+    isError*: bool
     Result*: JsonNode
-    RpcError*: RpcError
+    Error*: RpcError
     Id*: string
 
   JsonRpcError* = object of ValueError
-
-
-
-proc beResponse(r: var RpcResponse)=
-  r.err = false
-
-proc beError(r: var RpcResponse)=
-  r.err = true
-
-proc isResponse*(r: RpcResponse): bool=
-  result = not r.err
 
 proc `%`(r: RpcRequest): JsonNode {.raises: [], tags: [].}=
   result = newJObject()
@@ -49,10 +38,10 @@ proc `%`(r: RpcError): JsonNode {.raises: [], tags: [].}=
 proc `%`(r: RpcResponse): JsonNode {.raises: [], tags: [].}=
   result = newJObject()
   result.add("id", %r.Id)
-  if r.isResponse:
+  if not r.isError:
     result.add("result", r.Result)
   else:
-    result.add("error", %r.RpcError)
+    result.add("error", %r.Error)
   result.add("jsonrpc", %VER)
 
 proc `$`*(r: RpcRequest): string=
@@ -95,9 +84,9 @@ proc `$$`*(j: JsonNode): string=
 proc notValidJson2(j: JsonNode): bool=
   result = not j.hasKey("jsonrpc") or j["jsonrpc"].kind != JString or j["jsonrpc"].str != VER or not j.hasKey("id") or not (j.hasKey("result") xor j.hasKey("error"))
 
-proc SendRequest*(server: string, body: RpcRequest): RpcResponse=
+proc SendRequest*(server: string, body: RpcRequest): RpcResponse {.gcsafe.}=
   ## Send a request to server
-  var resp = postContent(server, body= $body)
+  var resp = postContent(server, body= $body, sslContext=nil, timeout=5000)
   var j = resp.parseJson
 
   # check if the response is valid JSON-RPC 2.0
@@ -116,22 +105,22 @@ proc SendRequest*(server: string, body: RpcRequest): RpcResponse=
   if j.hasKey("result"):
     # a response with no error
     result.Result = j["result"]
-    result.beResponse
+    result.isError = false
   elif j.hasKey("error"):
     # an error occured
-    result.beError
+    result.isError = true
     if not j["error"].hasKey("code") or not j["error"].hasKey("message") or j["error"]["code"].kind != JInt or j["error"]["message"].kind != JString:
       raise newException(JsonRpcError, "RpcError in response is not valid!")
-    result.RpcError.Code = j["error"]["code"].num
-    result.RpcError.Message = j["error"]["message"].str
+    result.Error.Code = j["error"]["code"].num
+    result.Error.Message = j["error"]["message"].str
     if j["error"].hasKey("data"):
-      result.RpcError.Data = j["error"]["data"]
+      result.Error.Data = j["error"]["data"]
     else:
-      result.RpcError.Data = nil
+      result.Error.Data = nil
 
-proc SendRequest*(server: string, body: seq[RpcRequest]): seq[RpcResponse]=
+proc SendRequest*(server: string, body: seq[RpcRequest]): seq[RpcResponse] {.gcsafe.}=
   ## Send a request to server
-  var resp = postContent(server, body= $body)
+  var resp = postContent(server, body= $body, sslContext=nil)
   var j = resp.parseJson
   if j.kind != JArray:
     raise newException(JsonRpcError, "RpcResponse is not valid JSON-RPC 2.0 Batch!")
@@ -154,18 +143,18 @@ proc SendRequest*(server: string, body: seq[RpcRequest]): seq[RpcResponse]=
     if j[i].hasKey("result"):
       # a response with no error
       result[i].Result = j[i]["result"]
-      result[i].beResponse
+      result[i].isError = false
     if j[i].hasKey("error"):
       # an error occured
-      result[i].beError
+      result[i].isError = true
       if not j[i]["error"].hasKey("code") or not j[i]["error"].hasKey("message") or j[i]["error"]["code"].kind != JInt or j[i]["error"]["message"].kind != JString:
         raise newException(JsonRpcError, "RpcError in response is not valid!")
-      result[i].RpcError.Code = j[i]["error"]["code"].num
-      result[i].RpcError.Message = j[i]["error"]["message"].str
+      result[i].Error.Code = j[i]["error"]["code"].num
+      result[i].Error.Message = j[i]["error"]["message"].str
       if j[i]["error"].hasKey("data"):
-        result[i].RpcError.Data = j[i]["error"]["data"]
+        result[i].Error.Data = j[i]["error"]["data"]
       else:
-        result[i].RpcError.Data = nil
+        result[i].Error.Data = nil
 
 # proc parseResponse(json: JsonNode): RpcResponse=
 #   if json.kind == JArray:
@@ -181,7 +170,7 @@ proc parseRequest*(json: JsonNode): RpcRequest=
   if json.kind == JArray:
     # result = newSeq[RpcResponse](json.len)
     raise newException(JsonRpcError, "Batch responses are not supported yet.")
-  elif json.kind != JObject or notValidJson2(json):
+  elif json.kind != JObject or not json.hasKey("jsonrpc") or json["jsonrpc"].kind != JString or json["jsonrpc"].str != VER or not json.hasKey("id"):
     raise newException(JsonRpcError, "Invalid JSON-RPC 2.0 Response!")
 
   result.Id = $$json["id"]
@@ -193,7 +182,7 @@ when isMainModule:
   var y = %x
   echo($y)
   var x2 = RpcResponse(Id: "1", Result: %"test")
-  echo(x2.isResponse)
-  x2.beResponse
+  echo(x2.isError)
+  x2.isError = false
   y = %x2
   echo($y)

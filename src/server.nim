@@ -50,7 +50,7 @@ routes:
         err.Message = "failed to add some activities"
         err.Data = failure
         res.Id = ""
-        res.beError
+        res.isError = true
         res.Error = err
       resp ($res)
 
