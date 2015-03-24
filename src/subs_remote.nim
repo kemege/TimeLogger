@@ -44,7 +44,25 @@ proc AppendRecords*(server: string, actList: seq[Activity]): int64 {.gcsafe.}=
     result = 0
 
 proc GetTagRules*(server: string): seq[TagRule] {.gcsafe.}=
-  result = @[]
+  var
+    request: RpcRequest
+
+  request.Method = "queryTagList"
+  request.Params = newJNull()
+  request.Id = ""
+  var response = SendRequest(server, request)
+  echo response
+  if response.isError:
+    echo "Error: ", response.Error.Code
+  else:
+    if response.Result.kind != JArray:
+      echo "Malformed response"
+    result = newSeq[TagRule](response.Result.len)
+    for i in 0 .. <response.Result.len:
+      result[i].tag = response.Result[i]["id_tag"].num.int
+      result[i].reg = re(response.Result[i]["keyword"].str)
+      result[i].keyword = response.Result[i]["keyword"].str
+      result[i].column = response.Result[i]["column"].num.int
 
 proc GetFittedTags*(activity: Activity, tagRules: seq[TagRule]): seq[int] {.gcsafe.}=
   ## Find out which tag to apply by matching the window 
